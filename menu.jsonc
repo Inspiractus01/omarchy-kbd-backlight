@@ -1,0 +1,23 @@
+  // Keyboard backlight: manual brightness, auto-dim on/off, dim level, and
+  // idle timeout. Backed by ~/.local/bin/omarchy-kbd-backlight.
+  "trigger.kbd-backlight": {"icon":"󰌌","label":"Keyboard Backlight","aliases":["backlight","kbd-backlight"],"description":"Keyboard backlight brightness and auto-dim"},
+  "trigger.kbd-backlight.auto-dim": {"icon":"󰔎","label":"Auto-Dim","aliases":["backlight"],"checked":"[[ \"$(omarchy-kbd-backlight auto-dim status)\" == \"enabled\" ]]","action":"omarchy-kbd-backlight auto-dim toggle"},
+
+  "trigger.kbd-backlight.brightness": {"icon":"󰍹","label":"Brightness","title":"Keyboard Brightness","aliases":["backlight"]},
+  "trigger.kbd-backlight.brightness.10": {"icon":"󰍹","label":"10%","checked":"[[ \"$(omarchy-kbd-backlight brightness status)\" -le 12 ]]","action":"omarchy-kbd-backlight brightness 10"},
+  "trigger.kbd-backlight.brightness.25": {"icon":"󰍹","label":"25%","checked":"(( $(omarchy-kbd-backlight brightness status) > 12 && $(omarchy-kbd-backlight brightness status) <= 37 ))","action":"omarchy-kbd-backlight brightness 25"},
+  "trigger.kbd-backlight.brightness.50": {"icon":"󰍹","label":"50%","checked":"(( $(omarchy-kbd-backlight brightness status) > 37 && $(omarchy-kbd-backlight brightness status) <= 62 ))","action":"omarchy-kbd-backlight brightness 50"},
+  "trigger.kbd-backlight.brightness.75": {"icon":"󰍹","label":"75%","checked":"(( $(omarchy-kbd-backlight brightness status) > 62 && $(omarchy-kbd-backlight brightness status) <= 87 ))","action":"omarchy-kbd-backlight brightness 75"},
+  "trigger.kbd-backlight.brightness.100": {"icon":"󰍹","label":"100%","checked":"[[ \"$(omarchy-kbd-backlight brightness status)\" -gt 87 ]]","action":"omarchy-kbd-backlight brightness 100"},
+
+  "trigger.kbd-backlight.dim-level": {"icon":"󰍹","label":"Dim Level","title":"Dim To","aliases":["backlight"]},
+  "trigger.kbd-backlight.dim-level.0": {"icon":"󰍹","label":"Off (0%)","checked":"[[ \"$(omarchy-kbd-backlight dim-percent status)\" == \"0\" ]]","action":"omarchy-kbd-backlight dim-percent 0"},
+  "trigger.kbd-backlight.dim-level.5": {"icon":"󰍹","label":"5%","checked":"[[ \"$(omarchy-kbd-backlight dim-percent status)\" == \"5\" ]]","action":"omarchy-kbd-backlight dim-percent 5"},
+  "trigger.kbd-backlight.dim-level.10": {"icon":"󰍹","label":"10%","checked":"[[ \"$(omarchy-kbd-backlight dim-percent status)\" == \"10\" ]]","action":"omarchy-kbd-backlight dim-percent 10"},
+
+  "trigger.kbd-backlight.timeout": {"icon":"","label":"Idle Timeout","title":"Dim After","aliases":["backlight"]},
+  "trigger.kbd-backlight.timeout.5": {"icon":"","label":"5 sec","checked":"[[ \"$(omarchy-kbd-backlight timeout status)\" == \"5\" ]]","action":"omarchy-kbd-backlight timeout 5"},
+  "trigger.kbd-backlight.timeout.10": {"icon":"","label":"10 sec","checked":"[[ \"$(omarchy-kbd-backlight timeout status)\" == \"10\" ]]","action":"omarchy-kbd-backlight timeout 10"},
+  "trigger.kbd-backlight.timeout.20": {"icon":"","label":"20 sec","checked":"[[ \"$(omarchy-kbd-backlight timeout status)\" == \"20\" ]]","action":"omarchy-kbd-backlight timeout 20"},
+  "trigger.kbd-backlight.timeout.30": {"icon":"","label":"30 sec","checked":"[[ \"$(omarchy-kbd-backlight timeout status)\" == \"30\" ]]","action":"omarchy-kbd-backlight timeout 30"},
+  "trigger.kbd-backlight.timeout.60": {"icon":"","label":"60 sec","checked":"[[ \"$(omarchy-kbd-backlight timeout status)\" == \"60\" ]]","action":"omarchy-kbd-backlight timeout 60"},

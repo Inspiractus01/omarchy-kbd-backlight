@@ -1,0 +1,35 @@
+#!/bin/bash
+# Called by hypridle (see ~/.config/hypr/hypridle.conf) to dim/restore the
+# keyboard backlight on idle/resume. Not meant to be run directly; settings
+# live in ~/.config/omarchy/kbd-backlight.conf (edit via omarchy-kbd-backlight).
+
+CONF_FILE="$HOME/.config/omarchy/kbd-backlight.conf"
+STATE_DIR="$HOME/.local/state/omarchy/indicators"
+DISABLED_FILE="$STATE_DIR/kbd-backlight-dim-disabled"
+LAST_FILE="$STATE_DIR/kbd-backlight-dim-last"
+DEVICE="kbd_backlight"
+
+# shellcheck disable=SC1090
+[[ -f $CONF_FILE ]] && source "$CONF_FILE"
+DIM_PERCENT="${DIM_PERCENT:-0}"
+
+case "$1" in
+  dim)
+    [[ -f $DISABLED_FILE ]] && exit 0
+    mkdir -p "$STATE_DIR"
+    brightnessctl -d "$DEVICE" g > "$LAST_FILE"
+    brightnessctl -d "$DEVICE" set "${DIM_PERCENT}%" >/dev/null
+    ;;
+  restore)
+    last=$(cat "$LAST_FILE" 2>/dev/null)
+    if [[ -z $last || $last == 0 ]]; then
+      brightnessctl -d "$DEVICE" set 5% >/dev/null
+    else
+      brightnessctl -d "$DEVICE" set "$last" >/dev/null
+    fi
+    ;;
+  *)
+    echo "Usage: omarchy-kbd-backlight-idle-hook [dim|restore]" >&2
+    exit 1
+    ;;
+esac

@@ -1,0 +1,103 @@
+#!/bin/bash
+# Keyboard backlight settings: manual brightness, auto-dim on/off, the dim
+# level, and the idle timeout before it kicks in.
+#
+# Usage:
+#   omarchy-kbd-backlight brightness <percent>|status
+#   omarchy-kbd-backlight dim-percent <percent>|status
+#   omarchy-kbd-backlight timeout <seconds>|status
+#   omarchy-kbd-backlight auto-dim on|off|toggle|status
+
+CONF_DIR="$HOME/.config/omarchy"
+CONF_FILE="$CONF_DIR/kbd-backlight.conf"
+STATE_DIR="$HOME/.local/state/omarchy/indicators"
+DISABLED_FILE="$STATE_DIR/kbd-backlight-dim-disabled"
+HYPRIDLE_CONF="$HOME/.config/hypr/hypridle.conf"
+HOOK="$HOME/.local/bin/omarchy-kbd-backlight-idle-hook"
+DEVICE="kbd_backlight"
+
+mkdir -p "$CONF_DIR"
+[[ -f $CONF_FILE ]] || printf 'IDLE_SECONDS=10\nDIM_PERCENT=0\n' > "$CONF_FILE"
+# shellcheck disable=SC1090
+source "$CONF_FILE"
+IDLE_SECONDS="${IDLE_SECONDS:-10}"
+DIM_PERCENT="${DIM_PERCENT:-0}"
+
+save_conf() {
+  cat > "$CONF_FILE" <<EOF
+IDLE_SECONDS=$IDLE_SECONDS
+DIM_PERCENT=$DIM_PERCENT
+EOF
+}
+
+regenerate_hypridle() {
+  cat > "$HYPRIDLE_CONF" <<EOF
+# Keyboard backlight auto-dim. Managed by omarchy-kbd-backlight -- edit via
+# 'omarchy-kbd-backlight timeout <seconds>' (or the Omarchy menu) rather
+# than by hand; this file gets regenerated.
+#
+# ignore_dbus_inhibit: without this, a video playing in a browser (Brave,
+# Firefox) holds a dbus idle-inhibit lock that silently blocks this whole
+# hypridle instance, so the keyboard never dims during video playback. Safe
+# to ignore here because this instance only dims the keyboard backlight --
+# screen lock/screensaver is handled separately by the Omarchy shell.
+general {
+  ignore_dbus_inhibit = true
+  ignore_systemd_inhibit = true
+}
+
+listener {
+  timeout = $IDLE_SECONDS
+  on-timeout = $HOOK dim
+  on-resume = $HOOK restore
+}
+EOF
+  pkill -x hypridle 2>/dev/null
+  sleep 0.2
+  setsid hypridle -c "$HYPRIDLE_CONF" >/dev/null 2>&1 &
+  disown
+}
+
+brightness_percent() {
+  local cur max
+  cur=$(brightnessctl -d "$DEVICE" g)
+  max=$(brightnessctl -d "$DEVICE" m)
+  echo $(( cur * 100 / max ))
+}
+
+case "$1" in
+  brightness)
+    case "$2" in
+      status) brightness_percent ;;
+      *) brightnessctl -d "$DEVICE" set "${2}%" >/dev/null && echo "$2" ;;
+    esac
+    ;;
+  dim-percent)
+    case "$2" in
+      status) echo "$DIM_PERCENT" ;;
+      *) DIM_PERCENT="$2"; save_conf; echo "$DIM_PERCENT" ;;
+    esac
+    ;;
+  timeout)
+    case "$2" in
+      status) echo "$IDLE_SECONDS" ;;
+      *) IDLE_SECONDS="$2"; save_conf; regenerate_hypridle; echo "$IDLE_SECONDS" ;;
+    esac
+    ;;
+  auto-dim)
+    case "$2" in
+      on|enable) rm -f "$DISABLED_FILE"; echo enabled ;;
+      off|disable) mkdir -p "$STATE_DIR"; touch "$DISABLED_FILE"; "$HOOK" restore; echo disabled ;;
+      toggle)
+        if [[ -f $DISABLED_FILE ]]; then rm -f "$DISABLED_FILE"; echo enabled
+        else mkdir -p "$STATE_DIR"; touch "$DISABLED_FILE"; "$HOOK" restore; echo disabled
+        fi
+        ;;
+      *) [[ -f $DISABLED_FILE ]] && echo disabled || echo enabled ;;
+    esac
+    ;;
+  *)
+    echo "Usage: omarchy-kbd-backlight {brightness|dim-percent|timeout|auto-dim} <value|status>" >&2
+    exit 1
+    ;;
+esac
