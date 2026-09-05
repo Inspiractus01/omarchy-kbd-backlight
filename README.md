@@ -8,6 +8,8 @@ Dims your keyboard backlight when you're idle, and restores it when you type or 
 - `brightnessctl`
 - a keyboard backlight controllable via `brightnessctl` (device `kbd_backlight`)
 
+Tested only on a MacBook Air M2 (Apple Silicon) running Omarchy via Asahi Linux. Should work on other machines with a `kbd_backlight` device, but not verified.
+
 ## Install
 
 ```bash
