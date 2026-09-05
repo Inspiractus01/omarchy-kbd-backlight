@@ -2,6 +2,8 @@
 
 Dims your keyboard backlight when you're idle, and restores it when you type or move the mouse. For Omarchy (Hyprland).
 
+![Keyboard Backlight menu](docs/screenshot.png)
+
 ## Requirements
 
 - Omarchy
