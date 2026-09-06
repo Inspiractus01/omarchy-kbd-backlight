@@ -26,6 +26,10 @@ cd omarchy-kbd-backlight
 ./install.sh
 ```
 
+The installer asks whether it should keep itself updated automatically
+whenever you run `omarchy update`. Say no, and you'll need to rerun
+`install.sh` yourself to pick up future fixes.
+
 ## Uninstall
 
 ```bash

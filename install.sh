@@ -50,4 +50,30 @@ echo "==> Starting auto-dim"
 [[ -f "$CONF_FILE" ]] && source "$CONF_FILE"
 "$BIN_DIR/omarchy-kbd-backlight" timeout "${IDLE_SECONDS:-10}" >/dev/null
 
+HOOK_FILE="$HOME/.config/omarchy/hooks/post-update.d/omarchy-kbd-backlight-update.hook"
+if [[ "${1:-}" == "--auto" ]]; then
+  : # This run *is* the auto-update the hook below triggers -- nothing to ask.
+elif [[ -f "$HOOK_FILE" ]]; then
+  echo "==> Auto-update via 'omarchy update' already enabled, skipping."
+else
+  echo "==> Auto-update"
+  REPLY="y"
+  read -rp "    Keep this updated automatically whenever you run 'omarchy update'? [Y/n] " REPLY < /dev/tty 2>/dev/null || true
+  if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+    mkdir -p "$(dirname "$HOOK_FILE")"
+    cat > "$HOOK_FILE" <<EOF
+#!/bin/bash
+# Keeps omarchy-kbd-backlight current. Added by its install.sh, because you
+# said yes to the auto-update prompt. Delete this file, or run
+# omarchy-kbd-backlight's uninstall.sh, to stop.
+set -e
+bash <(curl -fsSL "$REPO_RAW/install.sh") --auto
+EOF
+    chmod 755 "$HOOK_FILE"
+    echo "    Enabled."
+  else
+    echo "    Skipped -- rerun install.sh manually to update in the future."
+  fi
+fi
+
 echo "==> Done. Press SUPER+SPACE and search 'Keyboard Backlight'."

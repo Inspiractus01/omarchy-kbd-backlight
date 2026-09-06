@@ -19,6 +19,7 @@ rm -f "$SYSTEMD_USER_DIR/omarchy-kbd-backlight.service" \
       "$SYSTEMD_USER_DIR/omarchy-kbd-backlight-watchdog.timer" \
       "$SYSTEMD_USER_DIR/omarchy-kbd-backlight-resume-watch.service"
 systemctl --user daemon-reload 2>/dev/null || true
+rm -f "$HOME/.config/omarchy/hooks/post-update.d/omarchy-kbd-backlight-update.hook"
 
 echo "==> Done."
 echo "    Remove the 'trigger.kbd-backlight*' lines from"
