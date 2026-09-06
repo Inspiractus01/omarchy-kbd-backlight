@@ -18,6 +18,8 @@ DEVICE="kbd_backlight"
 SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
 SERVICE_UNIT="$SYSTEMD_USER_DIR/omarchy-kbd-backlight.service"
 SERVICE_NAME="omarchy-kbd-backlight.service"
+WATCHDOG_SERVICE_UNIT="$SYSTEMD_USER_DIR/omarchy-kbd-backlight-watchdog.service"
+WATCHDOG_TIMER_UNIT="$SYSTEMD_USER_DIR/omarchy-kbd-backlight-watchdog.timer"
 
 mkdir -p "$CONF_DIR"
 [[ -f $CONF_FILE ]] || printf 'IDLE_SECONDS=10\nDIM_PERCENT=0\n' > "$CONF_FILE"
@@ -76,6 +78,44 @@ EOF
   fi
   systemctl --user enable --now "$SERVICE_NAME" >/dev/null
   systemctl --user restart "$SERVICE_NAME"
+  ensure_watchdog
+}
+
+# hypridle's Wayland idle-notifier connection can silently wedge (seen in the
+# wild right after a Hyprland session lock/unlock cycle): the process stays
+# alive and "active" per systemd, but stops seeing any input activity at all,
+# so the keyboard backlight gets stuck dimmed forever. There is no reliable
+# signal to detect that from outside, so instead of trying to catch the exact
+# trigger, just restart the instance periodically -- cheap (well under a
+# second, no visible effect) and guarantees it can never stay wedged for more
+# than one interval.
+ensure_watchdog() {
+  mkdir -p "$SYSTEMD_USER_DIR"
+  if [[ ! -f $WATCHDOG_SERVICE_UNIT ]]; then
+    cat > "$WATCHDOG_SERVICE_UNIT" <<EOF
+[Unit]
+Description=Restart keyboard backlight auto-dim if it has wedged (Omarchy)
+
+[Service]
+Type=oneshot
+ExecStart=systemctl --user restart omarchy-kbd-backlight.service
+EOF
+  fi
+  if [[ ! -f $WATCHDOG_TIMER_UNIT ]]; then
+    cat > "$WATCHDOG_TIMER_UNIT" <<EOF
+[Unit]
+Description=Periodically restart keyboard backlight auto-dim if it has wedged (Omarchy)
+
+[Timer]
+OnUnitActiveSec=15min
+OnStartupSec=15min
+
+[Install]
+WantedBy=timers.target
+EOF
+    systemctl --user daemon-reload
+  fi
+  systemctl --user enable --now omarchy-kbd-backlight-watchdog.timer >/dev/null
 }
 
 brightness_percent() {
