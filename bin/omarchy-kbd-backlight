@@ -1,7 +1,4 @@
 #!/bin/bash
-# Keyboard backlight settings: manual brightness, auto-dim on/off, the dim
-# level, and the idle timeout before it kicks in.
-#
 # Usage:
 #   omarchy-kbd-backlight brightness <percent>|status
 #   omarchy-kbd-backlight dim-percent <percent>|status
@@ -39,16 +36,8 @@ EOF
 
 regenerate_hypridle() {
   cat > "$HYPRIDLE_CONF" <<EOF
-# Keyboard backlight auto-dim. Managed by omarchy-kbd-backlight -- edit via
-# 'omarchy-kbd-backlight timeout <seconds>' (or the Omarchy menu) rather
-# than by hand; this file gets regenerated.
-#
-# ignore_dbus_inhibit / ignore_wayland_inhibit: without these, a video or
-# call in a browser (Brave, Firefox, a Discord tab, etc.) holds a dbus or
-# Wayland idle-inhibit lock that silently blocks this whole hypridle
-# instance, so the keyboard never dims while it's active. Safe to ignore
-# here because this instance only dims the keyboard backlight -- screen
-# lock/screensaver is handled separately by the Omarchy shell.
+# Managed by omarchy-kbd-backlight -- edit via 'omarchy-kbd-backlight timeout
+# <seconds>' (or the Omarchy menu), this file gets regenerated.
 general {
   ignore_dbus_inhibit = true
   ignore_systemd_inhibit = true
@@ -86,28 +75,12 @@ EOF
   ensure_resume_watch
 }
 
-# hypridle's Wayland idle-notifier connection can silently wedge (seen in the
-# wild right after a Hyprland session lock/unlock cycle): the process stays
-# alive and "active" per systemd, but stops seeing any input activity at all,
-# so the keyboard backlight gets stuck dimmed forever. There is no reliable
-# signal to detect that from outside, so instead of trying to catch the exact
-# trigger, just restart the instance periodically -- cheap (well under a
-# second, no visible effect) and guarantees it can never stay wedged for more
-# than one interval.
-#
-# The restart itself can land while the keyboard happens to be dimmed. The
-# fresh hypridle instance starts out assuming it's not idle, so if the user
-# is actively typing right through the restart (the common case -- that's
-# often what triggers it), there's no idle->active transition left to fire
-# on-resume, and the backlight would stay stuck dark indefinitely. Forcing a
-# restore right after the restart closes that gap; it's a no-op if the
-# keyboard wasn't dimmed.
+# hypridle's Wayland idle-notifier connection can silently wedge (most often
+# right after a suspend/resume cycle), leaving the backlight stuck dimmed.
+# Restart it periodically, and force a restore after each restart in case it
+# lands while dimmed.
 ensure_watchdog() {
   mkdir -p "$SYSTEMD_USER_DIR"
-  # Unconditionally rewritten (unlike the other unit files below) since its
-  # ExecStart has already had to change once to fix the stuck-dark bug above
-  # -- a version gate here would silently strand existing installs on the
-  # old, buggy unit every time they update.
   cat > "$WATCHDOG_SERVICE_UNIT" <<EOF
 [Unit]
 Description=Restart keyboard backlight auto-dim if it has wedged (Omarchy)
@@ -133,13 +106,8 @@ EOF
   systemctl --user enable --now omarchy-kbd-backlight-watchdog.timer >/dev/null
 }
 
-# The 15-minute watchdog above guarantees the wedge above never lasts long,
-# but a suspend/resume cycle is by far the most common trigger for it (see
-# ensure_watchdog), and there's no reason to make a user wait up to 15
-# minutes after opening the lid for their keyboard to light up again. This
-# listens for logind's resume signal directly and restarts the service the
-# moment it fires, closing that gap to effectively instant. The watchdog
-# stays in place as a fallback for wedges from other causes.
+# Restarts the service immediately on resume from suspend, instead of
+# waiting up to 15 minutes for the watchdog above to catch it.
 ensure_resume_watch() {
   mkdir -p "$SYSTEMD_USER_DIR"
   if [[ ! -f $RESUME_WATCH_UNIT ]]; then

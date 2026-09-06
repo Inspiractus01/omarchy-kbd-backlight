@@ -52,7 +52,7 @@ echo "==> Starting auto-dim"
 
 HOOK_FILE="$HOME/.config/omarchy/hooks/post-update.d/omarchy-kbd-backlight-update.hook"
 if [[ "${1:-}" == "--auto" ]]; then
-  : # This run *is* the auto-update the hook below triggers -- nothing to ask.
+  :
 elif [[ -f "$HOOK_FILE" ]]; then
   echo "==> Auto-update via 'omarchy update' already enabled, skipping."
 else
@@ -63,9 +63,6 @@ else
     mkdir -p "$(dirname "$HOOK_FILE")"
     cat > "$HOOK_FILE" <<EOF
 #!/bin/bash
-# Keeps omarchy-kbd-backlight current. Added by its install.sh, because you
-# said yes to the auto-update prompt. Delete this file, or run
-# omarchy-kbd-backlight's uninstall.sh, to stop.
 set -e
 bash <(curl -fsSL "$REPO_RAW/install.sh") --auto
 EOF

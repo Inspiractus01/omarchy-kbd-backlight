@@ -1,19 +1,7 @@
 #!/bin/bash
-# Restarts the keyboard backlight auto-dim service the moment the system
-# resumes from suspend, instead of waiting for the periodic watchdog (see
-# ensure_watchdog in omarchy-kbd-backlight) to catch it on its next tick.
-# hypridle's Wayland idle-notifier connection can wedge across a suspend/
-# resume cycle -- the process stays alive but stops seeing any input
-# activity, so the keyboard backlight gets stuck. The watchdog timer already
-# guarantees it can't stay wedged for more than 15 minutes; this closes that
-# gap down to effectively instant by reacting to logind's resume signal.
-#
-# The restart lands while the keyboard is very likely still dimmed from
-# before suspend, and the fresh hypridle instance starts out assuming it's
-# not idle -- so if the user starts typing right away (the normal case on
-# opening the lid), there's no idle->active transition left to fire
-# on-resume, and the backlight would stay stuck dark until the next idle
-# cycle. Forcing a restore right after the restart closes that gap.
+# Restarts the keyboard backlight auto-dim service on resume from suspend
+# (hypridle can wedge across suspend/resume), then restores the brightness
+# in case the restart landed while the keyboard was dimmed.
 HOOK="$HOME/.local/bin/omarchy-kbd-backlight-idle-hook"
 
 exec dbus-monitor --system "type='signal',interface='org.freedesktop.login1.Manager',member='PrepareForSleep'" 2>/dev/null |
