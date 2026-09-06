@@ -94,18 +94,29 @@ EOF
 # trigger, just restart the instance periodically -- cheap (well under a
 # second, no visible effect) and guarantees it can never stay wedged for more
 # than one interval.
+#
+# The restart itself can land while the keyboard happens to be dimmed. The
+# fresh hypridle instance starts out assuming it's not idle, so if the user
+# is actively typing right through the restart (the common case -- that's
+# often what triggers it), there's no idle->active transition left to fire
+# on-resume, and the backlight would stay stuck dark indefinitely. Forcing a
+# restore right after the restart closes that gap; it's a no-op if the
+# keyboard wasn't dimmed.
 ensure_watchdog() {
   mkdir -p "$SYSTEMD_USER_DIR"
-  if [[ ! -f $WATCHDOG_SERVICE_UNIT ]]; then
-    cat > "$WATCHDOG_SERVICE_UNIT" <<EOF
+  # Unconditionally rewritten (unlike the other unit files below) since its
+  # ExecStart has already had to change once to fix the stuck-dark bug above
+  # -- a version gate here would silently strand existing installs on the
+  # old, buggy unit every time they update.
+  cat > "$WATCHDOG_SERVICE_UNIT" <<EOF
 [Unit]
 Description=Restart keyboard backlight auto-dim if it has wedged (Omarchy)
 
 [Service]
 Type=oneshot
-ExecStart=systemctl --user restart omarchy-kbd-backlight.service
+ExecStart=/bin/bash -c 'systemctl --user restart omarchy-kbd-backlight.service && $HOOK restore'
 EOF
-  fi
+  systemctl --user daemon-reload
   if [[ ! -f $WATCHDOG_TIMER_UNIT ]]; then
     cat > "$WATCHDOG_TIMER_UNIT" <<EOF
 [Unit]
@@ -118,7 +129,6 @@ OnStartupSec=15min
 [Install]
 WantedBy=timers.target
 EOF
-    systemctl --user daemon-reload
   fi
   systemctl --user enable --now omarchy-kbd-backlight-watchdog.timer >/dev/null
 }

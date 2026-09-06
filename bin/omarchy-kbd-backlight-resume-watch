@@ -7,8 +7,16 @@
 # activity, so the keyboard backlight gets stuck. The watchdog timer already
 # guarantees it can't stay wedged for more than 15 minutes; this closes that
 # gap down to effectively instant by reacting to logind's resume signal.
+#
+# The restart lands while the keyboard is very likely still dimmed from
+# before suspend, and the fresh hypridle instance starts out assuming it's
+# not idle -- so if the user starts typing right away (the normal case on
+# opening the lid), there's no idle->active transition left to fire
+# on-resume, and the backlight would stay stuck dark until the next idle
+# cycle. Forcing a restore right after the restart closes that gap.
+HOOK="$HOME/.local/bin/omarchy-kbd-backlight-idle-hook"
 
 exec dbus-monitor --system "type='signal',interface='org.freedesktop.login1.Manager',member='PrepareForSleep'" 2>/dev/null |
   while read -r line; do
-    [[ $line == *"boolean false"* ]] && systemctl --user restart omarchy-kbd-backlight.service
+    [[ $line == *"boolean false"* ]] && { systemctl --user restart omarchy-kbd-backlight.service; "$HOOK" restore; }
   done
