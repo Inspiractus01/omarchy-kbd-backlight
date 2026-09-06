@@ -4,18 +4,20 @@ set -euo pipefail
 BIN_DIR="$HOME/.local/bin"
 STATE_DIR="$HOME/.local/state/omarchy/indicators"
 HYPRIDLE_CONF="$HOME/.config/hypr/hypridle.conf"
-SERVICE_UNIT="$HOME/.config/systemd/user/omarchy-kbd-backlight.service"
-WATCHDOG_SERVICE_UNIT="$HOME/.config/systemd/user/omarchy-kbd-backlight-watchdog.service"
-WATCHDOG_TIMER_UNIT="$HOME/.config/systemd/user/omarchy-kbd-backlight-watchdog.timer"
+SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
 
 echo "==> Stopping services"
-systemctl --user stop omarchy-kbd-backlight-watchdog.timer omarchy-kbd-backlight.service 2>/dev/null || true
-systemctl --user disable omarchy-kbd-backlight-watchdog.timer omarchy-kbd-backlight.service 2>/dev/null || true
+systemctl --user disable --now omarchy-kbd-backlight.service omarchy-kbd-backlight-watchdog.timer omarchy-kbd-backlight-resume-watch.service 2>/dev/null || true
+pkill -x hypridle 2>/dev/null || true
 
 echo "==> Removing files"
-rm -f "$BIN_DIR/omarchy-kbd-backlight" "$BIN_DIR/omarchy-kbd-backlight-idle-hook"
+rm -f "$BIN_DIR/omarchy-kbd-backlight" "$BIN_DIR/omarchy-kbd-backlight-idle-hook" "$BIN_DIR/omarchy-kbd-backlight-resume-watch"
 rm -f "$STATE_DIR/kbd-backlight-dim-disabled" "$STATE_DIR/kbd-backlight-dim-last"
-rm -f "$HYPRIDLE_CONF" "$SERVICE_UNIT" "$WATCHDOG_SERVICE_UNIT" "$WATCHDOG_TIMER_UNIT"
+rm -f "$HYPRIDLE_CONF"
+rm -f "$SYSTEMD_USER_DIR/omarchy-kbd-backlight.service" \
+      "$SYSTEMD_USER_DIR/omarchy-kbd-backlight-watchdog.service" \
+      "$SYSTEMD_USER_DIR/omarchy-kbd-backlight-watchdog.timer" \
+      "$SYSTEMD_USER_DIR/omarchy-kbd-backlight-resume-watch.service"
 systemctl --user daemon-reload 2>/dev/null || true
 
 echo "==> Done."

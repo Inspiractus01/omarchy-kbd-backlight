@@ -50,6 +50,19 @@ omarchy-kbd-backlight timeout 10
 omarchy-kbd-backlight auto-dim toggle
 ```
 
+## Notes
+
+Two issues are worked around automatically, no action needed on your part:
+
+- A video or call in a browser tab (YouTube, a Discord tab, etc.) holds a
+  Wayland idle-inhibit lock that would otherwise block dimming entirely
+  while it's active.
+- `hypridle`'s idle-notifier connection can occasionally wedge, most often
+  right after a suspend/resume cycle -- the process stays running but stops
+  reacting to input, so the backlight can get stuck dimmed. A watcher
+  restarts the service the moment the system resumes, and a 15-minute
+  watchdog timer catches any other case.
+
 ## License
 
 MIT

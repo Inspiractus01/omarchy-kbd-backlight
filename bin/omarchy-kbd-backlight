@@ -20,6 +20,8 @@ SERVICE_UNIT="$SYSTEMD_USER_DIR/omarchy-kbd-backlight.service"
 SERVICE_NAME="omarchy-kbd-backlight.service"
 WATCHDOG_SERVICE_UNIT="$SYSTEMD_USER_DIR/omarchy-kbd-backlight-watchdog.service"
 WATCHDOG_TIMER_UNIT="$SYSTEMD_USER_DIR/omarchy-kbd-backlight-watchdog.timer"
+RESUME_WATCH_UNIT="$SYSTEMD_USER_DIR/omarchy-kbd-backlight-resume-watch.service"
+RESUME_WATCH_SCRIPT="$HOME/.local/bin/omarchy-kbd-backlight-resume-watch"
 
 mkdir -p "$CONF_DIR"
 [[ -f $CONF_FILE ]] || printf 'IDLE_SECONDS=10\nDIM_PERCENT=0\n' > "$CONF_FILE"
@@ -41,14 +43,16 @@ regenerate_hypridle() {
 # 'omarchy-kbd-backlight timeout <seconds>' (or the Omarchy menu) rather
 # than by hand; this file gets regenerated.
 #
-# ignore_dbus_inhibit: without this, a video playing in a browser (Brave,
-# Firefox) holds a dbus idle-inhibit lock that silently blocks this whole
-# hypridle instance, so the keyboard never dims during video playback. Safe
-# to ignore here because this instance only dims the keyboard backlight --
-# screen lock/screensaver is handled separately by the Omarchy shell.
+# ignore_dbus_inhibit / ignore_wayland_inhibit: without these, a video or
+# call in a browser (Brave, Firefox, a Discord tab, etc.) holds a dbus or
+# Wayland idle-inhibit lock that silently blocks this whole hypridle
+# instance, so the keyboard never dims while it's active. Safe to ignore
+# here because this instance only dims the keyboard backlight -- screen
+# lock/screensaver is handled separately by the Omarchy shell.
 general {
   ignore_dbus_inhibit = true
   ignore_systemd_inhibit = true
+  ignore_wayland_inhibit = true
 }
 
 listener {
@@ -79,6 +83,7 @@ EOF
   systemctl --user enable --now "$SERVICE_NAME" >/dev/null
   systemctl --user restart "$SERVICE_NAME"
   ensure_watchdog
+  ensure_resume_watch
 }
 
 # hypridle's Wayland idle-notifier connection can silently wedge (seen in the
@@ -116,6 +121,35 @@ EOF
     systemctl --user daemon-reload
   fi
   systemctl --user enable --now omarchy-kbd-backlight-watchdog.timer >/dev/null
+}
+
+# The 15-minute watchdog above guarantees the wedge above never lasts long,
+# but a suspend/resume cycle is by far the most common trigger for it (see
+# ensure_watchdog), and there's no reason to make a user wait up to 15
+# minutes after opening the lid for their keyboard to light up again. This
+# listens for logind's resume signal directly and restarts the service the
+# moment it fires, closing that gap to effectively instant. The watchdog
+# stays in place as a fallback for wedges from other causes.
+ensure_resume_watch() {
+  mkdir -p "$SYSTEMD_USER_DIR"
+  if [[ ! -f $RESUME_WATCH_UNIT ]]; then
+    cat > "$RESUME_WATCH_UNIT" <<EOF
+[Unit]
+Description=Restart keyboard backlight auto-dim immediately on resume (Omarchy)
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=$RESUME_WATCH_SCRIPT
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target
+EOF
+    systemctl --user daemon-reload
+  fi
+  systemctl --user enable --now omarchy-kbd-backlight-resume-watch.service >/dev/null
 }
 
 brightness_percent() {

@@ -10,12 +10,14 @@ echo "==> Checking dependencies"
 command -v brightnessctl >/dev/null || { echo "brightnessctl not found. Install it: omarchy pkg add brightnessctl"; exit 1; }
 command -v hypridle >/dev/null || { echo "hypridle not found. This needs Omarchy/Hyprland."; exit 1; }
 brightnessctl -d kbd_backlight g >/dev/null 2>&1 || { echo "No 'kbd_backlight' device found. Your keyboard has no controllable backlight."; exit 1; }
+command -v dbus-monitor >/dev/null || echo "    Note: dbus-monitor not found -- the instant-restart-on-resume watcher won't work, but the 15min watchdog will still catch a wedge."
 
 echo "==> Installing scripts to $BIN_DIR"
 mkdir -p "$BIN_DIR"
 curl -fsSL "$REPO_RAW/bin/omarchy-kbd-backlight" -o "$BIN_DIR/omarchy-kbd-backlight"
 curl -fsSL "$REPO_RAW/bin/omarchy-kbd-backlight-idle-hook" -o "$BIN_DIR/omarchy-kbd-backlight-idle-hook"
-chmod 755 "$BIN_DIR/omarchy-kbd-backlight" "$BIN_DIR/omarchy-kbd-backlight-idle-hook"
+curl -fsSL "$REPO_RAW/bin/omarchy-kbd-backlight-resume-watch" -o "$BIN_DIR/omarchy-kbd-backlight-resume-watch"
+chmod 755 "$BIN_DIR/omarchy-kbd-backlight" "$BIN_DIR/omarchy-kbd-backlight-idle-hook" "$BIN_DIR/omarchy-kbd-backlight-resume-watch"
 
 echo "==> Adding menu entries"
 mkdir -p "$(dirname "$MENU_FILE")"
