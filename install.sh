@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_RAW="https://raw.githubusercontent.com/Inspiractus01/omarchy-kbd-backlight/main"
 BIN_DIR="$HOME/.local/bin"
 MENU_FILE="$HOME/.config/omarchy/extensions/omarchy-menu.jsonc"
 CONF_FILE="$HOME/.config/omarchy/kbd-backlight.conf"
@@ -13,8 +13,9 @@ brightnessctl -d kbd_backlight g >/dev/null 2>&1 || { echo "No 'kbd_backlight' d
 
 echo "==> Installing scripts to $BIN_DIR"
 mkdir -p "$BIN_DIR"
-install -m 755 "$REPO_DIR/bin/omarchy-kbd-backlight" "$BIN_DIR/omarchy-kbd-backlight"
-install -m 755 "$REPO_DIR/bin/omarchy-kbd-backlight-idle-hook" "$BIN_DIR/omarchy-kbd-backlight-idle-hook"
+curl -fsSL "$REPO_RAW/bin/omarchy-kbd-backlight" -o "$BIN_DIR/omarchy-kbd-backlight"
+curl -fsSL "$REPO_RAW/bin/omarchy-kbd-backlight-idle-hook" -o "$BIN_DIR/omarchy-kbd-backlight-idle-hook"
+chmod 755 "$BIN_DIR/omarchy-kbd-backlight" "$BIN_DIR/omarchy-kbd-backlight-idle-hook"
 
 echo "==> Adding menu entries"
 mkdir -p "$(dirname "$MENU_FILE")"
@@ -25,7 +26,9 @@ if grep -q '"trigger.kbd-backlight"' "$MENU_FILE"; then
   echo "    Already added, skipping."
 else
   cp "$MENU_FILE" "$MENU_FILE.bak.$(date +%s)"
-  python3 - "$MENU_FILE" "$REPO_DIR/menu.jsonc" <<'PY'
+  SNIPPET_FILE="$(mktemp)"
+  curl -fsSL "$REPO_RAW/menu.jsonc" -o "$SNIPPET_FILE"
+  python3 - "$MENU_FILE" "$SNIPPET_FILE" <<'PY'
 import sys
 menu_path, snippet_path = sys.argv[1], sys.argv[2]
 snippet = open(snippet_path).read().rstrip("\n")
@@ -37,6 +40,7 @@ if new_text and not new_text.endswith(","):
 new_text += "\n\n" + snippet + "\n}\n"
 open(menu_path, "w").write(new_text)
 PY
+  rm -f "$SNIPPET_FILE"
   echo "    Added (backup: $MENU_FILE.bak.*)"
 fi
 

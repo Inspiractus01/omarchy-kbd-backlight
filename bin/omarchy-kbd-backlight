@@ -15,6 +15,9 @@ DISABLED_FILE="$STATE_DIR/kbd-backlight-dim-disabled"
 HYPRIDLE_CONF="$HOME/.config/hypr/hypridle.conf"
 HOOK="$HOME/.local/bin/omarchy-kbd-backlight-idle-hook"
 DEVICE="kbd_backlight"
+SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
+SERVICE_UNIT="$SYSTEMD_USER_DIR/omarchy-kbd-backlight.service"
+SERVICE_NAME="omarchy-kbd-backlight.service"
 
 mkdir -p "$CONF_DIR"
 [[ -f $CONF_FILE ]] || printf 'IDLE_SECONDS=10\nDIM_PERCENT=0\n' > "$CONF_FILE"
@@ -52,10 +55,27 @@ listener {
   on-resume = $HOOK restore
 }
 EOF
-  pkill -x hypridle 2>/dev/null
-  sleep 0.2
-  setsid hypridle -c "$HYPRIDLE_CONF" >/dev/null 2>&1 &
-  disown
+
+  mkdir -p "$SYSTEMD_USER_DIR"
+  if [[ ! -f $SERVICE_UNIT ]]; then
+    cat > "$SERVICE_UNIT" <<EOF
+[Unit]
+Description=Keyboard backlight auto-dim (Omarchy)
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/hypridle -c %h/.config/hypr/hypridle.conf
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target
+EOF
+    systemctl --user daemon-reload
+  fi
+  systemctl --user enable --now "$SERVICE_NAME" >/dev/null
+  systemctl --user restart "$SERVICE_NAME"
 }
 
 brightness_percent() {

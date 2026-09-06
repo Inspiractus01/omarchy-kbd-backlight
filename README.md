@@ -15,6 +15,12 @@ Tested only on a MacBook Air M2 (Apple Silicon) running Omarchy via Asahi Linux.
 ## Install
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/Inspiractus01/omarchy-kbd-backlight/main/install.sh | bash
+```
+
+Or clone it first if you'd rather read the script before running it:
+
+```bash
 git clone https://github.com/Inspiractus01/omarchy-kbd-backlight.git
 cd omarchy-kbd-backlight
 ./install.sh
@@ -23,7 +29,7 @@ cd omarchy-kbd-backlight
 ## Uninstall
 
 ```bash
-./uninstall.sh
+curl -fsSL https://raw.githubusercontent.com/Inspiractus01/omarchy-kbd-backlight/main/uninstall.sh | bash
 ```
 
 ## Use
